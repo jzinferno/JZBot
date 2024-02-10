@@ -5,10 +5,14 @@ case "$1" in
     uname -m
     ;;
   os )
-    awk -F '=' '/PRETTY_NAME/ { print $2 }' /etc/os-release | tr -d \"
+    if [ -f '/etc/os-release' ]; then
+      awk -F '=' '/PRETTY_NAME/ { print $2 }' /etc/os-release | tr -d \"
+    else
+      uname -sm
+    fi
     ;;
   ip )
-    curl -sw '\n' 'http://ident.me'
+    echo $(curl -s 'http://ident.me' || printf '127.0.0.1')
     ;;
   uptime )
     boot=$(date -d"$(uptime -s)" +%s)
@@ -32,10 +36,10 @@ case "$1" in
     echo ${uptime:-$s secs}
     ;;
   cpu )
-    awk -F '\\s*: | @' '/model name|Hardware|Processor/ { print $2; exit }' /proc/cpuinfo
+    awk -F '\\s*: | @' '/model name|Hardware|Processor/ {print $2; exit(0)}' /proc/cpuinfo
     ;;
   gpu )
-    lspci | awk -F '\\s*: | @' '/Display|3D|VGA/ { print $2; exit }'
+    lspci 2>/dev/null | awk -F '\\s*: | @' '{f=0} /Display|3D|VGA/ {print $2; f=1; exit(0)} END {if (f==0) exit(1)}' || echo 'Unknown'
     ;;
   neofetch )
     neofetch --stdout | grep ':'
